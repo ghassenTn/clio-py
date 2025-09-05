@@ -17,11 +17,11 @@ class BaseModel:
     """Base AI model that uses the Gemini API."""
     def __init__(self):
         api_key = os.environ.get("GEMINI_API_KEY")
-        model = os.environ.get("model")
-        if not api_key or not model:
-            raise ValueError("GEMINI_API_KEY or model environment variable not set.")
+        model  = os.environ.get("model", "gemini-1.5-flash-latest")
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY environment variable not set.")
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(model)
+        self.model = genai.GenerativeModel(f'models/{model}')
 
     def formulate_plan(self, prompt, steering=None):
         """Formulates a plan for solving the problem."""
@@ -52,3 +52,9 @@ class BaseModel:
             return float(response.text.strip())
         except ValueError:
             return 0.5
+
+    def apply_steering(self, steering_command, plan, results):
+        """Applies a steering command to the plan and results."""
+        response = self.model.generate_content(f"Apply the following steering command to the plan and results:\nSteering Command: {steering_command}\nPlan: {plan}\nResults: {results}")
+        # In a real application, you would parse the response and update the plan and results accordingly.
+        return plan, results

@@ -1,4 +1,3 @@
-
 import logging
 from .belief_graph import BeliefGraph
 from .uncertainty import Uncertainty
@@ -26,7 +25,7 @@ class ReasoningLoop:
         # 2. Execute the plan
         logging.info("Executing plan...")
         results = []
-        for step in plan:
+        for i, step in enumerate(plan):
             retries = 0
             while retries < self.max_retries:
                 logging.info(f"Executing step: {step} (Attempt {retries + 1})")
@@ -42,6 +41,12 @@ class ReasoningLoop:
             result_node = belief_graph.add_node(f"Result: {result} (Certainty: {certainty})")
             belief_graph.add_edge(plan_node, step_node, label="includes")
             belief_graph.add_edge(step_node, result_node, label="produces")
+
+            # Apply programmatic steering
+            if steering and steering.steering_function:
+                steering_command = steering.steering_function(belief_graph, results)
+                if steering_command:
+                    plan, results = self.base_model.apply_steering(steering_command, plan, results)
 
         # 3. Reflect on the results
         logging.info("Reflecting on results...")
