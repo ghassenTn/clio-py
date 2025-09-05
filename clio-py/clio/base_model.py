@@ -17,33 +17,66 @@ class BaseModel:
     """Base AI model that uses the Gemini API."""
     def __init__(self):
         api_key = os.environ.get("GEMINI_API_KEY")
-        model  = os.environ.get("model", "gemini-1.5-flash-latest")
+        model = os.environ.get("model", "gemini-1.5-flash-latest")
         if not api_key:
             raise ValueError("GEMINI_API_KEY environment variable not set.")
         genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel(f'models/{model}')
+        self.model = genai.GenerativeModel(model)
+        self.cache = None
 
     def formulate_plan(self, prompt, steering=None):
         """Formulates a plan for solving the problem."""
+        if self.cache and self.cache.get(prompt):
+            # print(self.cache.get(prompt))
+            return self.cache.get(prompt)[0]
+        
         response = self.model.generate_content(f"Formulate a plan to answer the following question: {prompt}")
-        return response.text.strip().split('\n')
+        plan = response.text.strip().split('\n')
+        
+        if self.cache:
+            self.cache.set(prompt, plan, source=prompt)
+        return plan
 
     def execute_step(self, step, steering=None):
         """Executes a single step of the plan and returns the result and certainty."""
-        response = self.model.generate_content(f"Execute the following step: {step}")
-        result = response.text.strip()
-        certainty = self.calculate_certainty(result)
+        if self.cache and self.cache.get(step):
+            cached_data = self.cache.get(step)
+            result = cached_data['value']
+            certainty = cached_data['certainty']
+        else:
+            response = self.model.generate_content(f"Execute the following step: {step}")
+            result = response.text.strip()
+            certainty = self.calculate_certainty(result)
+            if self.cache:
+                self.cache.set(step, result, source=step, certainty=certainty)
+
         return result, certainty
 
     def reflect(self, prompt, results, steering=None):
         """Reflects on the results of the plan execution."""
+        cache_key = f"{prompt}-{results}"
+        if self.cache and self.cache.get(cache_key):
+            return self.cache.get(cache_key)['value']
+
         response = self.model.generate_content(f"Reflect on the results of the following plan execution:\nPrompt: {prompt}\nResults: {results}")
-        return response.text.strip()
+        reflection = response.text.strip()
+
+        if self.cache:
+            self.cache.set(cache_key, reflection, source=prompt)
+        return reflection
 
     def formulate_conclusion(self, prompt, reflection, steering=None):
         """Formulates a final conclusion."""
+        cache_key = f"{prompt}-{reflection}"
+        if self.cache and self.cache.get(cache_key):
+            return self.cache.get(cache_key)['value']
+
         response = self.model.generate_content(f"Formulate a final conclusion based on the following reflection:\nPrompt: {prompt}\nReflection: {reflection}")
-        return response.text.strip()
+        conclusion = response.text.strip()
+
+        if self.cache:
+            self.cache.set(cache_key, conclusion, source=prompt)
+        return conclusion
 
     def calculate_certainty(self, text):
         """Calculates the certainty of a given text."""

@@ -1,6 +1,8 @@
+
 import logging
 from .belief_graph import BeliefGraph
 from .uncertainty import Uncertainty
+from .cache import Cache
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -10,6 +12,8 @@ class ReasoningLoop:
         self.base_model = base_model
         self.certainty_threshold = certainty_threshold
         self.max_retries = max_retries
+        self.cache = Cache()
+        self.base_model.cache = self.cache
 
     def run(self, prompt, steering=None):
         """Runs the reasoning loop."""
