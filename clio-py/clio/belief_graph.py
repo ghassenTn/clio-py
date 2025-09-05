@@ -1,4 +1,3 @@
-
 import graphviz
 
 class Node:
@@ -50,7 +49,11 @@ class BeliefGraph:
         """Returns a graphviz.Digraph object for visualization."""
         dot = graphviz.Digraph()
         for node in self.nodes:
-            dot.node(str(node.id), node.label)
+            if "```" in node.label:
+                code = node.label.split("```")[1]
+                dot.node(str(node.id), code, shape='box', fontname='Courier')
+            else:
+                dot.node(str(node.id), node.label)
         for edge in self.edges:
             dot.edge(str(edge.source.id), str(edge.target.id), label=edge.label)
         return dot

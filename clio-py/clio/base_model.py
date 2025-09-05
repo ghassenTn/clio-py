@@ -27,8 +27,7 @@ class BaseModel:
     def formulate_plan(self, prompt, steering=None):
         """Formulates a plan for solving the problem."""
         if self.cache and self.cache.get(prompt):
-            # print(self.cache.get(prompt))
-            return self.cache.get(prompt)[0]
+            return self.cache.get(prompt)['value']
         
         response = self.model.generate_content(f"Formulate a plan to answer the following question: {prompt}")
         plan = response.text.strip().split('\n')
